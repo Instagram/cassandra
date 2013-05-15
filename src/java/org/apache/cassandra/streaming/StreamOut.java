@@ -22,14 +22,17 @@ import java.util.*;
 import java.util.concurrent.Future;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.db.ColumnFamilyStore;
 import org.apache.cassandra.db.Table;
+import org.apache.cassandra.db.RowPosition;
 import org.apache.cassandra.dht.Range;
 import org.apache.cassandra.dht.Token;
+import org.apache.cassandra.dht.AbstractBounds;
 import org.apache.cassandra.io.sstable.Descriptor;
 import org.apache.cassandra.io.sstable.SSTable;
 import org.apache.cassandra.io.sstable.SSTableReader;
@@ -114,9 +117,25 @@ public class StreamOut
         logger.info("Beginning transfer to {}", session.getHost());
         logger.debug("Ranges are {}", StringUtils.join(ranges, ","));
         flushSSTables(cfses);
-        Iterable<SSTableReader> sstables = Collections.emptyList();
+
+        Set<SSTableReader> sstables = Sets.newHashSet();
         for (ColumnFamilyStore cfStore : cfses)
-            sstables = Iterables.concat(sstables, cfStore.markCurrentSSTablesReferenced());
+        {
+            for (Range<Token> range : ranges)
+            {
+                AbstractBounds<RowPosition> rangePositions = range.toRowBounds();
+                ColumnFamilyStore.ViewFragment view = cfStore.markReferenced(rangePositions.left, rangePositions.right);
+
+                for (SSTableReader sstable : view.sstables)
+                {
+                    if (sstables.contains(sstable))
+                        sstable.releaseReference();
+                    else
+                        sstables.add(sstable);
+                }
+            }
+        }
+
         transferSSTables(session, sstables, ranges, type);
     }
 
