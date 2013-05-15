@@ -22,7 +22,7 @@ import java.util.*;
 import java.util.concurrent.Future;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,23 +117,15 @@ public class StreamOut
         logger.info("Beginning transfer to {}", session.getHost());
         logger.debug("Ranges are {}", StringUtils.join(ranges, ","));
         flushSSTables(cfses);
+        List<SSTableReader> sstables = Lists.newLinkedList();
 
-        Set<SSTableReader> sstables = Sets.newHashSet();
         for (ColumnFamilyStore cfStore : cfses)
         {
+            List<AbstractBounds<RowPosition>> rowRanges = Lists.newLinkedList();
             for (Range<Token> range : ranges)
-            {
-                AbstractBounds<RowPosition> rangePositions = range.toRowBounds();
-                ColumnFamilyStore.ViewFragment view = cfStore.markReferenced(rangePositions.left, rangePositions.right);
-
-                for (SSTableReader sstable : view.sstables)
-                {
-                    if (sstables.contains(sstable))
-                        sstable.releaseReference();
-                    else
-                        sstables.add(sstable);
-                }
-            }
+                rowRanges.add(range.toRowBounds());
+            ColumnFamilyStore.ViewFragment view = cfStore.markReferenced(rowRanges);
+            sstables.addAll(view.sstables);
         }
 
         transferSSTables(session, sstables, ranges, type);
