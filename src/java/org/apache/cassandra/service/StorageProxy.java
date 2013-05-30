@@ -59,6 +59,7 @@ import org.apache.cassandra.locator.AbstractReplicationStrategy;
 import org.apache.cassandra.locator.IEndpointSnitch;
 import org.apache.cassandra.locator.TokenMetadata;
 import org.apache.cassandra.metrics.ClientRequestMetrics;
+import org.apache.cassandra.metrics.ReadRepairMetrics;
 import org.apache.cassandra.net.*;
 import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.utils.ByteBufferUtil;
@@ -889,6 +890,10 @@ public class StorageProxy implements StorageProxyMBean
                 List<InetAddress> endpoints = getLiveSortedEndpoints(table, command.key);
                 CFMetaData cfm = Schema.instance.getCFMetaData(command.getKeyspace(), command.getColumnFamilyName());
                 endpoints = consistency_level.filterForQuery(table, endpoints, cfm.newReadRepairDecision());
+                
+                if (endpoints.size() > 1) {
+        	        ReadRepairMetrics.attempted.mark();
+                }
 
                 RowDigestResolver resolver = new RowDigestResolver(command.table, command.key);
                 ReadCallback<ReadResponse, Row> handler = new ReadCallback(resolver, consistency_level, command, endpoints);
@@ -960,6 +965,9 @@ public class StorageProxy implements StorageProxyMBean
                 catch (DigestMismatchException ex)
                 {
                     logger.debug("Digest mismatch: {}", ex.toString());
+                    
+                    ReadRepairMetrics.repaired.mark();
+                    
                     // Do a full data read to resolve the correct response (and repair node that need be)
                     RowDataResolver resolver = new RowDataResolver(command.table, command.key, command.filter());
                     ReadCallback<ReadResponse, Row> repairHandler = handler.withNewResolver(resolver);
