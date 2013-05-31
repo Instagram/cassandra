@@ -889,9 +889,11 @@ public class StorageProxy implements StorageProxyMBean
 
                 List<InetAddress> endpoints = getLiveSortedEndpoints(table, command.key);
                 CFMetaData cfm = Schema.instance.getCFMetaData(command.getKeyspace(), command.getColumnFamilyName());
-                endpoints = consistency_level.filterForQuery(table, endpoints, cfm.newReadRepairDecision());
+
+                ReadRepairDecision rrDecision = metaData.newReadRepairDecision();
+                endpoints = consistency_level.filterForQuery(table, endpoints, rrDecision);
                 
-                if (endpoints.size() > 1) {
+                if (rrDecision != ReadRepairDecision.NONE) {
         	        ReadRepairMetrics.attempted.mark();
                 }
 
@@ -966,7 +968,7 @@ public class StorageProxy implements StorageProxyMBean
                 {
                     logger.debug("Digest mismatch: {}", ex.toString());
                     
-                    ReadRepairMetrics.repaired.mark();
+                    ReadRepairMetrics.repaired_blocking.mark();
                     
                     // Do a full data read to resolve the correct response (and repair node that need be)
                     RowDataResolver resolver = new RowDataResolver(command.table, command.key, command.filter());
@@ -1710,4 +1712,16 @@ public class StorageProxy implements StorageProxyMBean
 
     public Long getTruncateRpcTimeout() { return DatabaseDescriptor.getTruncateRpcTimeout(); }
     public void setTruncateRpcTimeout(Long timeoutInMillis) { DatabaseDescriptor.setTruncateRpcTimeout(timeoutInMillis); }
+    
+    public long getReadRepairAttempted() {
+    	return ReadRepairMetrics.attempted.count();
+    }
+    
+    public long getReadRepairRepairedBlocking() {
+    	return ReadRepairMetrics.repaired_blocking.count();
+    }
+    
+    public long getReadRepairRepairedBackground() {
+    	return ReadRepairMetrics.repaired_background.count();
+    }
 }

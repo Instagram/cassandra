@@ -669,6 +669,8 @@ public class NodeCmd
                 outs.printf("   Error retrieving file data for %s%n", host);
             }
         }
+        
+        outs.printf("Read Repair: Attempted %d, Repaired: Blocking %d, Background %d%n", probe.getReadRepairAttempted(), probe.getReadRepairRepairedBlocking(), probe.getReadRepairRepairedBackground());
 
         MessagingServiceMBean ms = probe.msProxy;
         outs.printf("%-25s", "Pool Name");
