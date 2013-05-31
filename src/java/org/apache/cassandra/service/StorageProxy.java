@@ -39,6 +39,7 @@ import org.apache.cassandra.concurrent.Stage;
 import org.apache.cassandra.concurrent.StageManager;
 import org.apache.cassandra.config.CFMetaData;
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.config.ReadRepairDecision;
 import org.apache.cassandra.config.Schema;
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.db.Table;
@@ -890,7 +891,7 @@ public class StorageProxy implements StorageProxyMBean
                 List<InetAddress> endpoints = getLiveSortedEndpoints(table, command.key);
                 CFMetaData cfm = Schema.instance.getCFMetaData(command.getKeyspace(), command.getColumnFamilyName());
 
-                ReadRepairDecision rrDecision = metaData.newReadRepairDecision();
+                ReadRepairDecision rrDecision = cfm.newReadRepairDecision();
                 endpoints = consistency_level.filterForQuery(table, endpoints, rrDecision);
                 
                 if (rrDecision != ReadRepairDecision.NONE) {
