@@ -670,7 +670,7 @@ public class NodeCmd
             }
         }
         
-        outs.printf("Read Repair: Attempted %d, Repaired: Blocking %d, Background %d%n", probe.getReadRepairAttempted(), probe.getReadRepairRepairedBlocking(), probe.getReadRepairRepairedBackground());
+        outs.printf("Read Repair Statistics:%nAttempted %d%nMismatch (Blocking): %d%nMismatch (Background): %d%n", probe.getReadRepairAttempted(), probe.getReadRepairRepairedBlocking(), probe.getReadRepairRepairedBackground());
 
         MessagingServiceMBean ms = probe.msProxy;
         outs.printf("%-25s", "Pool Name");
