@@ -496,19 +496,6 @@ public class NodeProbe
     }
 
     /**
-     * Get the compaction threshold
-     *
-     * @param outs the stream to write to
-     */
-    public void getCompactionThreshold(PrintStream outs, String ks, String cf)
-    {
-        ColumnFamilyStoreMBean cfsProxy = getCfsProxy(ks, cf);
-        outs.println("Current compaction thresholds for " + ks + "/" + cf + ": \n" +
-                     " min = " + cfsProxy.getMinimumCompactionThreshold() + ", " +
-                     " max = " + cfsProxy.getMaximumCompactionThreshold());
-    }
-
-    /**
      * Set the compaction threshold
      *
      * @param minimumCompactionThreshold minimum compaction threshold
@@ -759,6 +746,11 @@ public class NodeProbe
         return ssProxy.getCompactionThroughputMbPerSec();
     }
 
+    public int getStreamThroughput()
+    {
+        return ssProxy.getStreamThroughputMbPerSec();
+    }
+
     public int getExceptionCount()
     {
         return ssProxy.getExceptionCount();
@@ -832,6 +824,21 @@ public class NodeProbe
     public boolean isFailed()
     {
         return failed;
+    }
+    
+    public long getReadRepairAttempted()
+    {
+    	return spProxy.getReadRepairAttempted();
+    }
+    
+    public long getReadRepairRepairedBlocking()
+    {
+    	return spProxy.getReadRepairRepairedBlocking();
+    }
+    
+    public long getReadRepairRepairedBackground()
+    {
+    	return spProxy.getReadRepairRepairedBackground();
     }
 }
 

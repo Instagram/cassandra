@@ -1,4 +1,5 @@
 1.2.6
+ * Scale hinted_handoff_throttle_in_kb to cluster size (CASSANDRA-5272)
  * (Hadoop) Fix InputKeyRange in CFIF (CASSANDRA-5536)
  * Fix dealing with ridiculously large max sstable sizes in LCS (CASSANDRA-5589)
  * Ignore pre-truncate hints (CASSANDRA-4655)
@@ -9,9 +10,11 @@
  * Exclude localTimestamp from validation for tombstones (CASSANDRA-5398)
  * cqlsh: add custom prompt support (CASSANDRA-5539)
  * Reuse prepared statements in hot auth queries (CASSANDRA-5594)
+ * cqlsh: add vertical output option (see EXPAND) (CASSANDRA-5597)
 Merged from 1.1:
  * Remove buggy thrift max message length option (CASSANDRA-5529)
  * Fix NPE in Pig's widerow mode (CASSANDRA-5488)
+ * Add split size parameter to Pig and disable split combination (CASSANDRA-5544)
 
 
 1.2.5
