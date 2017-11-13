@@ -142,9 +142,20 @@ public class RocksDBEngine implements StorageEngine
                 rocksDBCF.truncate();
             else
                 logger.info("Can not find rocksdb table: " + cfs.name);
-        }
+
         catch (RocksDBException e)
         {
+            logger.error(e.toString(), e);
+        }
+    }
+
+    public void invalidate(ColumnFamilyStore cfs) {
+        try {
+            RocksDBCF rocksDBCF = getRocksDBCF(cfs);
+            rocksDBCF.close();
+            rocksDBCF.destroy();
+        }
+        catch(RocksDBException e) {
             logger.error(e.toString(), e);
         }
     }

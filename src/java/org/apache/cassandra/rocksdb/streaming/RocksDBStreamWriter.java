@@ -148,6 +148,6 @@ public class RocksDBStreamWriter
 
     private void updateProgress(boolean completed)
     {
-        RocksDBStreamUtils.rocksDBProgress(session, rocksDBCF.getCfID().toString(), ProgressInfo.Direction.OUT, outgoingBytes, streamedPairs, estimatedTotalKeys, completed);
+        RocksDBStreamUtils.rocksDBProgress(session, rocksDBCF.getCfId().toString(), ProgressInfo.Direction.OUT, outgoingBytes, streamedPairs, estimatedTotalKeys, completed);
     }
 }

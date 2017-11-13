@@ -52,7 +52,9 @@ import org.apache.cassandra.rocksdb.streaming.RocksDBStreamWriter;
 import org.apache.cassandra.rocksdb.tools.SanityCheckUtils;
 import org.apache.cassandra.rocksdb.tools.StreamingConsistencyCheckUtils;
 import org.apache.cassandra.streaming.StreamSession;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.JVMStabilityInspector;
 import org.apache.cassandra.utils.Hex;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
@@ -82,14 +84,13 @@ import static org.apache.cassandra.rocksdb.RocksDBConfigs.ROCKSDB_DIR;
 public class RocksDBCF implements RocksDBCFMBean
 {
     private static final Logger logger = LoggerFactory.getLogger(RocksDBCF.class);
-    private final UUID cfID;
+    private final UUID cfId;
     private final ColumnFamilyStore cfs;
     private final IPartitioner partitioner;
     private final RocksDBEngine engine;
     private final RocksDB rocksDB;
     private final Statistics stats;
     private final RocksDBTableMetrics rocksMetrics;
-    private final String mbeanName;
     private final CassandraCompactionFilter compactionFilter;
     private final CassandraValueMergeOperator mergeOperator;
 
@@ -97,14 +98,17 @@ public class RocksDBCF implements RocksDBCFMBean
     private final WriteOptions disableWAL;
     private final FlushOptions flushOptions;
 
+    private final String rocksDBTableDir;
+
     public RocksDBCF(ColumnFamilyStore cfs) throws RocksDBException
     {
         this.cfs = cfs;
-        cfID = cfs.metadata.cfId;
+        cfId = cfs.metadata.cfId;
         partitioner = cfs.getPartitioner();
         engine = (RocksDBEngine) cfs.engine;
 
-        String rocksDBTableDir = ROCKSDB_DIR + "/" + cfs.keyspace.getName() + "/" + cfs.name;
+        rocksDBTableDir = String.format("%s/%s/%s-%s",
+                ROCKSDB_DIR, cfs.keyspace.getName(), cfs.name, ByteBufferUtil.bytesToHex(ByteBufferUtil.bytes(cfId)));
         FileUtils.createDirectory(ROCKSDB_DIR);
         FileUtils.createDirectory(rocksDBTableDir);
 
@@ -196,8 +200,12 @@ public class RocksDBCF implements RocksDBCFMBean
         disableWAL = new WriteOptions().setDisableWAL(true);
         flushOptions = new FlushOptions().setWaitForFlush(true);
 
+        registerMBean();
+    }
+
+    private void registerMBean() {
         // Register the mbean.
-        mbeanName = getMbeanName(cfs.keyspace.getName(), cfs.getTableName());
+        String mbeanName = getMbeanName(cfs.keyspace.getName(), cfs.getTableName());
         try
         {
             MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
@@ -208,6 +216,25 @@ public class RocksDBCF implements RocksDBCFMBean
             throw Throwables.propagate(e);
         }
     }
+
+    private void unregisterMBean() {
+        String mbeanName = getMbeanName(cfs.keyspace.getName(), cfs.getTableName());
+        try
+        {
+            MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+            ObjectName mbean = new ObjectName(mbeanName);
+            if (mbs.isRegistered(mbean)) {
+                mbs.unregisterMBean(mbean);
+            }
+        }
+        catch (Exception e)
+        {
+            JVMStabilityInspector.inspectThrowable(e);
+            // this shouldn't block anything.
+            logger.warn("Failed unregistering mbean: {}", mbeanName, e);
+        }
+    }
+
 
     public static String getMbeanName(String keyspace, String table)
     {
@@ -296,11 +323,18 @@ public class RocksDBCF implements RocksDBCFMBean
         synchronized (engine.rocksDBFamily)
         {
             rocksDB.close();
+            unregisterMBean();
 
             // remove the rocksdb instance, since it's not usable
-            engine.rocksDBFamily.remove(cfID);
+            engine.rocksDBFamily.remove(cfId);
         }
     }
+
+    protected void destroy() throws RocksDBException {
+        logger.info("Deleting rocksdb table: " + cfs.name);
+        rocksDB.destroyDB(rocksDBTableDir, new Options());
+    }
+
 
     public String dumpPrefix(byte[] rocksKeyPrefix, int limit)
     {
@@ -337,9 +371,9 @@ public class RocksDBCF implements RocksDBCFMBean
         return sb.toString();
     }
 
-    public UUID getCfID()
+    public UUID getCfId()
     {
-        return cfID;
+        return cfId;
     }
 
     @Override
