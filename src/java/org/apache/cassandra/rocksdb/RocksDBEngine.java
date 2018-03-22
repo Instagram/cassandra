@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListenableFutureTask;
+import org.rocksdb.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,19 +115,63 @@ public class RocksDBEngine implements StorageEngine
 
     public void apply(ColumnFamilyStore cfs, PartitionUpdate update, UpdateTransaction indexer, boolean writeCommitLog)
     {
+        //TODO: WriteBatch takes a hint for how many bytes to reserve that we might want to use.
+        WriteBatch batch = new WriteBatch();
         DecoratedKey partitionKey = update.partitionKey();
 
         for (Row row : update)
         {
-            applyRowToRocksDB(cfs, writeCommitLog, partitionKey, indexer, row);
+            addWriteToBatch(batch, cfs, partitionKey, row, indexer);
         }
 
         Row staticRow = update.staticRow();
         if (!staticRow.isEmpty())
         {
-            applyRowToRocksDB(cfs, writeCommitLog, partitionKey, indexer, staticRow);
+            addWriteToBatch(batch, cfs, partitionKey, staticRow, indexer);
+        }
+
+        RocksDBCF dbcf = rocksDBFamily.get(cfs.metadata.cfId);
+        try {
+            dbcf.write(partitionKey, batch, writeCommitLog);
+        }
+        catch (RocksDBException e)
+        {
+            logger.error(e.toString(), e);
+        } finally {
+            indexer.commit();
         }
     }
+
+    private void addWriteToBatch(WriteBatch b,
+                                 ColumnFamilyStore cfs,
+                                 DecoratedKey partitionKey,
+                                 Row row,
+                                 UpdateTransaction indexer)
+    {
+
+        Clustering clustering = row.clustering();
+
+        byte[] rocksDBKey = RowKeyEncoder.encode(partitionKey, clustering, cfs.metadata);
+        byte[] rocksDBValue = RowValueEncoder.encode(cfs.metadata, row);
+
+        b.merge(rocksDBKey, rocksDBValue);
+
+        if (indexer != UpdateTransaction.NO_OP)
+        {
+            try
+            {
+                secondaryIndexMetrics.rsiTotalInsertions.inc();
+                indexer.onInserted(row);
+            }
+            catch (RuntimeException e)
+            {
+                secondaryIndexMetrics.rsiInsertionFailures.inc();
+                logger.error(e.toString(), e);
+                throw new StorageEngineException("Index update failed", e);
+            }
+        }
+    }
+
 
     public UnfilteredRowIterator queryStorage(ColumnFamilyStore cfs, SinglePartitionReadCommand readCommand)
     {
@@ -219,49 +264,6 @@ public class RocksDBEngine implements StorageEngine
     public AbstractStreamReceiveTask getStreamReceiveTask(StreamSession session, StreamSummary summary)
     {
         return new RocksDBStreamReceiveTask(session, summary.cfId, summary.files, summary.totalSize);
-    }
-
-    private void applyRowToRocksDB(ColumnFamilyStore cfs,
-                                   boolean writeCommitLog,
-                                   DecoratedKey partitionKey,
-                                   UpdateTransaction indexer,
-                                   Row row)
-    {
-
-        Clustering clustering = row.clustering();
-
-        byte[] rocksDBKey = RowKeyEncoder.encode(partitionKey, clustering, cfs.metadata);
-        byte[] rocksDBValue = RowValueEncoder.encode(cfs.metadata, row);
-
-        try
-        {
-            indexer.start();
-            rocksDBFamily.get(cfs.metadata.cfId).merge(partitionKey, rocksDBKey, rocksDBValue);
-            if (indexer != UpdateTransaction.NO_OP)
-            {
-                try
-                {
-                    secondaryIndexMetrics.rsiTotalInsertions.inc();
-                    indexer.onInserted(row);
-                }
-                catch (RuntimeException e)
-                {
-                    secondaryIndexMetrics.rsiInsertionFailures.inc();
-                    logger.error(e.toString(), e);
-                    throw new StorageEngineException("Index update failed", e);
-                }
-
-            }
-        }
-        catch (RocksDBException e)
-        {
-            logger.error(e.toString(), e);
-            throw new StorageEngineException("Row merge failed", e);
-        }
-        finally
-        {
-            indexer.commit();
-        }
     }
 
     public static RocksDBCF getRocksDBCF(UUID cfId)

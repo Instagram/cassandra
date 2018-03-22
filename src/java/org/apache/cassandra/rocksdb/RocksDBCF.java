@@ -57,6 +57,7 @@ import org.apache.cassandra.rocksdb.tools.StreamingConsistencyCheckUtils;
 import org.apache.cassandra.streaming.StreamSession;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.Hex;
+
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
 import org.rocksdb.CassandraCompactionFilter;
@@ -64,7 +65,6 @@ import org.rocksdb.CassandraValueMergeOperator;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.CompactionPriority;
-import org.rocksdb.CompressionType;
 import org.rocksdb.DBOptions;
 import org.rocksdb.Env;
 import org.rocksdb.FlushOptions;
@@ -75,6 +75,7 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
+import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
 
 import static org.apache.cassandra.rocksdb.RocksDBConfigs.MERGE_OPERANDS_LIMIT;
@@ -98,7 +99,6 @@ public class RocksDBCF implements RocksDBCFMBean
     private final CassandraValueMergeOperator mergeOperator;
 
     private final ReadOptions readOptions;
-    private final WriteOptions disableWAL;
     private final FlushOptions flushOptions;
 
     private final int gcGraceSeconds;
@@ -152,7 +152,6 @@ public class RocksDBCF implements RocksDBCFMBean
         // until compaction happens. However in our case, range deletion is only used to remove ranges
         // no longer owned by this node. In such case, stale keys would never be quried.
         readOptions = new ReadOptions().setIgnoreRangeDeletions(true);
-        disableWAL = new WriteOptions().setDisableWAL(true);
         flushOptions = new FlushOptions().setWaitForFlush(true);
 
         // Register the mbean.
@@ -309,17 +308,14 @@ public class RocksDBCF implements RocksDBCFMBean
         return new RocksDBIteratorAdapter(rocksDB.newIterator(options), rocksMetrics);
     }
 
-    public void merge(DecoratedKey partitionKey, byte[] key, byte[] value) throws RocksDBException
+    public void write(DecoratedKey partitionKey, WriteBatch batch, boolean writeCommitLog) throws RocksDBException
     {
-        RocksDB rocksDB = getRocksDBFromKey(partitionKey);
-        if (RocksDBConfigs.DISABLE_WRITE_TO_COMMITLOG)
-        {
-            rocksDB.merge(disableWAL, key, value);
+        WriteOptions options = new WriteOptions();
+        if(!writeCommitLog) {
+            options.setDisableWAL(true);
         }
-        else
-        {
-            rocksDB.merge(key, value);
-        }
+
+        getRocksDBFromKey(partitionKey).write(options, batch);
     }
 
     public void deleteRange(byte[] start, byte[] end) throws RocksDBException
