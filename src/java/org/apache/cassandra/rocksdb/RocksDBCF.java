@@ -57,6 +57,7 @@ import org.apache.cassandra.rocksdb.tools.StreamingConsistencyCheckUtils;
 import org.apache.cassandra.streaming.StreamSession;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.Hex;
+import org.apache.cassandra.utils.Pair;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
 import org.rocksdb.CassandraCompactionFilter;
@@ -383,7 +384,7 @@ public class RocksDBCF implements RocksDBCFMBean
             for (RocksDB rocksDB : rocksDBLists)
                 rocksDB.close();
             // remove the rocksdb instance, since it's not usable
-            engine.rocksDBFamily.remove(cfID);
+            engine.rocksDBFamily.remove(new Pair<>(cfID, cfs.name));
         }
         finally
         {

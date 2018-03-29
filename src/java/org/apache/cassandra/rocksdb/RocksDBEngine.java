@@ -66,6 +66,7 @@ import org.apache.cassandra.rocksdb.streaming.RocksDBStreamUtils;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.streaming.StreamSession;
 import org.apache.cassandra.streaming.StreamSummary;
+import org.apache.cassandra.utils.Pair;
 import org.rocksdb.RateLimiter;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -80,7 +81,7 @@ public class RocksDBEngine implements StorageEngine
                                                                                            new NamedThreadFactory("RocksDBFlush"),
                                                                                            "internal");
 
-    public final ConcurrentMap<UUID, RocksDBCF> rocksDBFamily = new ConcurrentHashMap<>();
+    public final ConcurrentMap<Pair<UUID, String>, RocksDBCF> rocksDBFamily = new ConcurrentHashMap<>();
 
     static
     {
@@ -104,7 +105,7 @@ public class RocksDBEngine implements StorageEngine
     {
         try
         {
-            rocksDBFamily.putIfAbsent(cfs.metadata.cfId, new RocksDBCF(cfs));
+            rocksDBFamily.putIfAbsent(new Pair<>(cfs.metadata.cfId, cfs.name), new RocksDBCF(cfs));
         }
         catch (RocksDBException e)
         {
@@ -130,7 +131,7 @@ public class RocksDBEngine implements StorageEngine
 
     public UnfilteredRowIterator queryStorage(ColumnFamilyStore cfs, SinglePartitionReadCommand readCommand)
     {
-        Partition partition = new RocksDBPartition(rocksDBFamily.get(cfs.metadata.cfId),
+        Partition partition = new RocksDBPartition(rocksDBFamily.get(new Pair<>(cfs.metadata.cfId, cfs.name)),
                                                    readCommand.partitionKey(),
                                                    readCommand.metadata());
         return readCommand.clusteringIndexFilter().getUnfilteredRowIterator(readCommand.columnFilter(), partition);
@@ -236,7 +237,7 @@ public class RocksDBEngine implements StorageEngine
         try
         {
             indexer.start();
-            rocksDBFamily.get(cfs.metadata.cfId).merge(partitionKey, rocksDBKey, rocksDBValue);
+            rocksDBFamily.get(new Pair<>(cfs.metadata.cfId, cfs.name)).merge(partitionKey, rocksDBKey, rocksDBValue);
             if (indexer != UpdateTransaction.NO_OP)
             {
                 try
@@ -274,7 +275,7 @@ public class RocksDBEngine implements StorageEngine
     {
         if (cfs != null && cfs.engine instanceof RocksDBEngine)
         {
-            return ((RocksDBEngine) cfs.engine).rocksDBFamily.get(cfs.metadata.cfId);
+            return ((RocksDBEngine) cfs.engine).rocksDBFamily.get(new Pair<>(cfs.metadata.cfId, cfs.name));
         }
         return null;
     }
@@ -290,7 +291,7 @@ public class RocksDBEngine implements StorageEngine
         }
         final Collection<Range<Token>> ranges = StorageService.instance.getLocalRanges(keyspace.getName());
         final Collection<Range<Token>> completeRanges = RocksDBStreamUtils.calcluateComplementRanges(cfs.getPartitioner(), ranges);
-        RocksDBCF db = rocksDBFamily.get(cfs.metadata.cfId);
+        RocksDBCF db = rocksDBFamily.get(new Pair<>(cfs.metadata.cfId, cfs.name));
         for (Range range : completeRanges)
         {
             try

@@ -22,6 +22,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.apache.cassandra.db.ColumnFamilyStore;
+import org.apache.cassandra.rocksdb.index.RocksandraClusteringColumnIndex;
 import org.jboss.byteman.contrib.bmunit.BMRule;
 import org.jboss.byteman.contrib.bmunit.BMUnitRunner;
 
@@ -67,6 +68,22 @@ public class RocksDBEngineTest extends RocksDBTestBase
     }
 
     @Test
+    public void testNumberOfRocksDBCF() throws Throwable
+    {
+        createTable("CREATE TABLE %s (p text, c text, v text, PRIMARY KEY (p, c))");
+        execute("INSERT INTO %s(p, c, v) values (?, ?, ?)", "p1", "k1", "v1");
+
+        ColumnFamilyStore cfs = getCurrentColumnFamilyStore();
+
+        int originalNumRocksDBFamilySize = ((RocksDBEngine)cfs.engine).rocksDBFamily.size();
+
+        createIndex(String.format("CREATE CUSTOM INDEX test_index ON %%s(v) USING '%s'",
+                                  RocksandraClusteringColumnIndex.class.getName()));
+
+        assertEquals(originalNumRocksDBFamilySize + 1, ((RocksDBEngine)cfs.engine).rocksDBFamily.size());
+    }
+
+    @Test
     @BMRule(name = "throw exception when merging rows",
     targetClass = "RocksDBCF",
     targetMethod = "merge",
@@ -75,7 +92,8 @@ public class RocksDBEngineTest extends RocksDBTestBase
     public void testShouldThrowStorageEngineExceptionWhenRowMergeFails() throws Throwable
     {
         createTable("CREATE TABLE %s (p text, c text, v text, j text, PRIMARY KEY (p, c, v))");
-        createIndex("CREATE CUSTOM INDEX test_index ON %s(v) USING 'org.apache.cassandra.rocksdb.index.RocksandraClusteringColumnIndex'");
+        createIndex(String.format("CREATE CUSTOM INDEX test_index ON %%s(v) USING '%s'",
+                                  RocksandraClusteringColumnIndex.class.getName()));
 
         assertInvalidMessage("Row merge failed: test exception",
                              "INSERT INTO %s(p, c, v, j) values (?, ?, ?, ?)", "p1", "k1", "v1", "j1");
@@ -90,8 +108,8 @@ public class RocksDBEngineTest extends RocksDBTestBase
     public void testShouldThrowStorageEngineExceptionWhenIndexInsertionFails() throws Throwable
     {
         createTable("CREATE TABLE %s (p text, c text, v text, j text, PRIMARY KEY (p, c, v))");
-        createIndex("CREATE CUSTOM INDEX test_index ON %s(v) USING 'org.apache.cassandra.rocksdb.index.RocksandraClusteringColumnIndex'");
-
+        createIndex(String.format("CREATE CUSTOM INDEX test_index ON %%s(v) USING '%s'",
+                                  RocksandraClusteringColumnIndex.class.getName()));
         assertInvalidMessage("Index update failed: test exception",
                              "INSERT INTO %s(p, c, v, j) values (?, ?, ?, ?)", "p1", "k1", "v1", "j1");
     }
