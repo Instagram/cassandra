@@ -67,6 +67,8 @@ import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.streaming.StreamSession;
 import org.apache.cassandra.streaming.StreamSummary;
 import org.apache.cassandra.utils.Pair;
+import org.rocksdb.Cache;
+import org.rocksdb.LRUCache;
 import org.rocksdb.RateLimiter;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -90,6 +92,7 @@ public class RocksDBEngine implements StorageEngine
 
     protected int compactionthroughputMbPerSec = RocksDBConfigs.RATE_MBYTES_PER_SECOND;
     public final RateLimiter rateLimiter = new RateLimiter(1024L * 1024L * compactionthroughputMbPerSec);
+    public final Cache cache = new LRUCache(RocksDBConfigs.BLOCK_CACHE_SIZE_MBYTES * 1024 * 1024L);
 
     public static SecondaryIndexMetrics secondaryIndexMetrics = new SecondaryIndexMetrics();
 

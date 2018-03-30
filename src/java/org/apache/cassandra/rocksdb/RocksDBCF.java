@@ -30,7 +30,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
@@ -65,7 +64,6 @@ import org.rocksdb.CassandraValueMergeOperator;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.CompactionPriority;
-import org.rocksdb.CompressionType;
 import org.rocksdb.DBOptions;
 import org.rocksdb.Env;
 import org.rocksdb.FlushOptions;
@@ -134,7 +132,7 @@ public class RocksDBCF implements RocksDBCFMBean
         final org.rocksdb.BloomFilter bloomFilter = new BloomFilter(10, false);
         final BlockBasedTableConfig tableOptions = new BlockBasedTableConfig();
         tableOptions.setFilter(bloomFilter);
-        tableOptions.setBlockCacheSize(RocksDBConfigs.BLOCK_CACHE_SIZE_MBYTES * 1024 * 1024L);
+        tableOptions.setBlockCache(engine.cache);
         tableOptions.setCacheIndexAndFilterBlocks(RocksDBConfigs.CACHE_INDEX_AND_FILTER_BLOCKS);
         tableOptions.setPinL0FilterAndIndexBlocksInCache(RocksDBConfigs.PIN_L0_FILTER_AND_INDEX_BLOCKS_IN_CACHE);
         tableOptions.setIndexType(getTableIndexType(RocksDBConfigs.TABLE_INDEX_TYPE));
