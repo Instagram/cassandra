@@ -2,6 +2,7 @@ package org.apache.cassandra.rocksdb;
 
 import java.io.File;
 
+import org.apache.cassandra.exceptions.ConfigurationException;
 import org.rocksdb.CompressionType;
 import org.rocksdb.IndexType;
 
@@ -13,8 +14,28 @@ public class RocksDBConfigs
         CompressionType.getCompressionType(System.getProperty("cassandra.rocksdb.bottommost_compression"));
 
     // Paths for storing RocksDB files.
-    public static String ROCKSDB_DIR = System.getProperty("cassandra.rocksdb.dir", "/data/rocksdb");
-    public static File STREAMING_TMPFILE_PATH = new File(System.getProperty("cassandra.rocksdb.stream.dir", "/data/rocksdbstream/"));
+    public static String ROCKSDB_DIR = System.getProperty("cassandra.rocksdb.dir", null);
+    public static String STREAMING_TMPFILE_PATH_DIR = System.getProperty("cassandra.rocksdb.stream.dir", null);
+
+    static
+    {
+        if (ROCKSDB_DIR == null)
+        {
+            ROCKSDB_DIR = System.getProperty("cassandra.storagedir", null);
+            if (ROCKSDB_DIR == null)
+                throw new ConfigurationException("cassandra.rocksdb.dir is missing and -Dcassandra.storagedir is not set", false);
+            ROCKSDB_DIR += File.separator + "rocksdb";
+        }
+
+        if (STREAMING_TMPFILE_PATH_DIR == null)
+        {
+            STREAMING_TMPFILE_PATH_DIR = System.getProperty("cassandra.storagedir", null);
+            if (STREAMING_TMPFILE_PATH_DIR == null)
+                throw new ConfigurationException("cassandra.rocksdb.stream.dir is missing and -Dcassandra.storagedir is not set", false);
+            STREAMING_TMPFILE_PATH_DIR += File.separator + "rocksdbstream";
+        }
+    }
+    public static File STREAMING_TMPFILE_PATH = new File(STREAMING_TMPFILE_PATH_DIR);
 
     // Max levels for RocksDB. 7 is the default value.
     public static final int MAX_LEVELS = Integer.getInteger("cassandra.rocksdb.max_levels", 7);
