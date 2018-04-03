@@ -2049,6 +2049,13 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
         // position in the System keyspace.
         logger.trace("truncating {}", name);
 
+        if (engine != null)
+        {
+            for (ColumnFamilyStore cfs : concatWithIndexes())
+                engine.truncate(cfs);
+            return;
+        }
+
         final long truncatedAt;
         final ReplayPosition replayAfter;
 

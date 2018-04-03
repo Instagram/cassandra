@@ -49,6 +49,28 @@ public class RocksDBEngineTest extends RocksDBTestBase
     }
 
     @Test
+    public void testTruncate() throws Throwable
+    {
+        createTable("CREATE TABLE %s (p text, c text, v text, PRIMARY KEY (p, c))");
+        execute("INSERT INTO %s(p, c, v) values (?, ?, ?)", "p1", "k1", "v1");
+        execute("INSERT INTO %s(p, c, v) values (?, ?, ?)", "p1", "k2", "v2");
+        execute("INSERT INTO %s(p, c, v) values (?, ?, ?)", "p2", "k", "v");
+
+        assertRows(execute("SELECT * from %s WHERE p = ?", "p1"),
+                   row("p1", "k1", "v1"),
+                   row("p1", "k2", "v2"));
+
+        assertRows(execute("SELECT * from %s WHERE p = ?", "p2"),
+                   row("p2", "k", "v"));
+
+        ColumnFamilyStore cfs = getCurrentColumnFamilyStore();
+        cfs.truncateBlocking();
+        assertEmpty(execute("SELECT * from %s WHERE p = ? AND c = ?", "p1", "k1"));
+        assertEmpty(execute("SELECT * from %s WHERE p = ? AND c = ?", "p1", "k2"));
+        assertEmpty(execute("SELECT * from %s WHERE p = ? AND c = ?", "p2", "k"));
+    }
+
+    @Test
     public void testSetCompactionThroughput() throws Throwable
     {
         createTable("CREATE TABLE %s (p text, c text, v text, PRIMARY KEY (p, c))");

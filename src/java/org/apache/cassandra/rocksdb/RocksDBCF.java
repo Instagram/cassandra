@@ -366,9 +366,22 @@ public class RocksDBCF implements RocksDBCFMBean
 
     public void truncate() throws RocksDBException
     {
-        // TODO: use delete range for now, could have a better solution
-        deleteRange(RowKeyEncoder.encodeToken(RocksDBUtils.getMinToken(partitioner)),
-                    RowKeyEncoder.encodeToken(RocksDBUtils.getMaxToken(partitioner)));
+        logger.info("Truncating rocksdb table: " + cfs.name);
+        byte[] startRange = RowKeyEncoder.encodeToken(RocksDBUtils.getMinToken(partitioner));
+        byte[] endRange = RowKeyEncoder.encodeToken(RocksDBUtils.getMaxToken(partitioner));
+
+        for (RocksDB rocksDB : rocksDBLists)
+        {
+            // delete all sstables other than L0
+            rocksDB.deleteFilesInRange(startRange, endRange);
+
+            // Move L0 sstables to L1
+            rocksDB.flush(flushOptions);
+            rocksDB.compactRange();
+
+            // delete all sstables other than L0
+            rocksDB.deleteFilesInRange(startRange, endRange);
+        }
     }
 
     protected void close()
