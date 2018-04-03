@@ -40,7 +40,7 @@ public class RocksDBStreamTestBase extends RocksDBTestBase
 {
 
     @BeforeClass
-    public static void classSetUp() throws Exception
+    public static void classSetUp()
     {
         RocksDBTestBase.classSetUp();
         RocksDBConfigs.NUM_SHARD = 8;

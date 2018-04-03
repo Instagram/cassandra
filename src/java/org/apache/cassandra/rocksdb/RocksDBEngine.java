@@ -185,20 +185,13 @@ public class RocksDBEngine implements StorageEngine
 
     public void close(ColumnFamilyStore cfs)
     {
-        try
+        RocksDBCF rocksDBCF = getRocksDBCF(cfs);
+        if (rocksDBCF != null)
         {
-            RocksDBCF rocksDBCF = getRocksDBCF(cfs);
-            if (rocksDBCF != null)
-            {
-                rocksDBCF.close();
-            }
-            else
-                logger.info("Can not find rocksdb table: " + cfs.name);
+            rocksDBCF.close();
         }
-        catch (RocksDBException e)
-        {
-            logger.error(e.toString(), e);
-        }
+        else
+            logger.info("Can not find rocksdb table: " + cfs.name);
     }
 
     public void setCompactionThroughputMbPerSec(int throughputMbPerSec)

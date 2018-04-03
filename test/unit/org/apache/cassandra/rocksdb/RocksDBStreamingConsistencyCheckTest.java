@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.rocksdb;
 
-import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Set;
 
 import org.junit.Before;
@@ -27,14 +25,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.cql3.QueryOptions;
-import org.apache.cassandra.cql3.QueryProcessor;
-import org.apache.cassandra.cql3.statements.ParsedStatement;
 import org.apache.cassandra.db.ColumnFamilyStore;
-import org.apache.cassandra.db.SystemKeyspace;
 import org.apache.cassandra.rocksdb.tools.StreamingConsistencyCheckUtils;
-import org.apache.cassandra.service.ClientState;
-import org.apache.cassandra.service.QueryState;
 import org.apache.cassandra.utils.FBUtilities;
 
 import static org.junit.Assert.assertEquals;
@@ -42,7 +34,7 @@ import static org.junit.Assert.assertEquals;
 public class RocksDBStreamingConsistencyCheckTest extends RocksDBTestBase
 {
     @BeforeClass
-    public static void classSetUp() throws Exception
+    public static void classSetUp()
     {
         RocksDBTestBase.classSetUp();
     }

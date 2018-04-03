@@ -30,10 +30,7 @@ import org.apache.cassandra.db.DecoratedKey;
 import org.apache.cassandra.db.rows.BTreeRow;
 import org.apache.cassandra.db.rows.BufferCell;
 import org.apache.cassandra.db.rows.Row;
-import org.apache.cassandra.rocksdb.encoding.RowKeyEncoder;
-import org.apache.cassandra.rocksdb.encoding.value.ColumnEncoder;
 import org.apache.cassandra.rocksdb.encoding.value.RowValueEncoder;
-import org.apache.cassandra.utils.Hex;
 import org.rocksdb.IndexType;
 import org.rocksdb.RocksDBException;
 

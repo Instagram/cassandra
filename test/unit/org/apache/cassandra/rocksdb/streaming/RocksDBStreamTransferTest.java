@@ -62,7 +62,7 @@ public class RocksDBStreamTransferTest extends RocksDBStreamTestBase
     public static final InetAddress LOCAL = FBUtilities.getBroadcastAddress();
 
     @BeforeClass
-    public static void classSetUp() throws Exception
+    public static void classSetUp()
     {
         RocksDBStreamTestBase.classSetUp();
         SchemaLoader.prepareServer();

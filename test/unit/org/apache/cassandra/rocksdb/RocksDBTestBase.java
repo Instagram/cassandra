@@ -50,9 +50,11 @@ import org.rocksdb.RocksDBException;
 public class RocksDBTestBase extends CQLTester
 {
     @BeforeClass
-    public static void classSetUp() throws Exception
+    public static void classSetUp()
     {
-        RocksDBConfigs.ROCKSDB_DIR  = "/tmp/rocksdbtest/" + UUID.randomUUID();
+        System.setProperty("cassandra.rocksdb.dir", "/tmp/rocksdbtest/" + UUID.randomUUID());
+        System.setProperty("cassandra.rocksdb.stream.dir", "/tmp/rocksdbteststream/" + UUID.randomUUID());
+        
         RocksDBConfigs.ROCKSDB_KEYSPACE = CQLTester.KEYSPACE;
         RocksDBConfigs.NUM_SHARD = 1;
         File rocksdbdir = new File(RocksDBConfigs.ROCKSDB_DIR);

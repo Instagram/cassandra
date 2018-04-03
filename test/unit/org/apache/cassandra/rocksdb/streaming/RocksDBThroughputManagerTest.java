@@ -76,7 +76,7 @@ public class RocksDBThroughputManagerTest extends RocksDBStreamTestBase
     }
 
     @BeforeClass
-    public static void classSetUp() throws Exception
+    public static void classSetUp()
     {
         RocksDBStreamTestBase.classSetUp();
         // Disable periodically calcuate the throughput.

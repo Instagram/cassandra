@@ -14,7 +14,7 @@ import static org.junit.Assert.assertEquals;
 public class RocksDBDoubleWriteSanityCheckTest extends RocksDBTestBase
 {
     @BeforeClass
-    public static void classSetUp() throws Exception
+    public static void classSetUp()
     {
         RocksDBTestBase.classSetUp();
         RocksDBConfigs.ROCKSDB_DOUBLE_WRITE = true;

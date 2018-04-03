@@ -367,12 +367,11 @@ public class RocksDBCF implements RocksDBCFMBean
     public void truncate() throws RocksDBException
     {
         // TODO: use delete range for now, could have a better solution
-        for (RocksDB rocksDB : rocksDBLists)
-            rocksDB.deleteRange(RowKeyEncoder.encodeToken(RocksDBUtils.getMinToken(partitioner)),
-                            RowKeyEncoder.encodeToken(RocksDBUtils.getMaxToken(partitioner)));
+        deleteRange(RowKeyEncoder.encodeToken(RocksDBUtils.getMinToken(partitioner)),
+                    RowKeyEncoder.encodeToken(RocksDBUtils.getMaxToken(partitioner)));
     }
 
-    protected void close() throws RocksDBException
+    protected void close()
     {
         logger.info("Closing rocksdb table: " + cfs.name);
         try
