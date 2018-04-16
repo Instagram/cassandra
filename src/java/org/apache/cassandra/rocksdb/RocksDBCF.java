@@ -180,8 +180,8 @@ public class RocksDBCF implements RocksDBCFMBean
         }
         catch (RocksDBException ex)
         {
-            logger.warn("Failed to load latest RocksDB options for cf {}.{}",
-                        cfs.keyspace.getName(), cfs.name);
+            logger.error("Failed to load latest RocksDB options for cf {}.{}",
+                         cfs.keyspace.getName(), cfs.name, ex);
         }
 
         final long writeBufferSize = RocksDBConfigs.WRITE_BUFFER_SIZE_MBYTES * 1024 * 1024L;
