@@ -20,6 +20,7 @@ package org.apache.cassandra.rocksdb;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -147,8 +148,50 @@ public class RocksDBPartition implements Partition
 
     public UnfilteredRowIterator unfilteredIterator(ColumnFilter columns, Slices slices, boolean reversed)
     {
-        //TODO: support multiple slices
-        return sliceIterator(slices.get(0), columns, (reversed ? PartitionIterOrder.REVERSED : PartitionIterOrder.NORMAL));
+        if(slices.size() == 1) {
+            return sliceIterator(slices.get(0), columns, reversed
+                    ? PartitionIterOrder.REVERSED
+                    : PartitionIterOrder.NORMAL);
+        }
+
+        return new SlicesIterator(slices, columns, reversed);
+    }
+
+    private class SlicesIterator extends AbstractUnfilteredRowIterator {
+        private final Iterator<Slice> slices;
+        private final PartitionIterOrder iterOrder;
+        private final ColumnFilter columnFilter;
+
+        private Iterator<Unfiltered> currentSlice;
+
+        private SlicesIterator(Slices slices, ColumnFilter columnFilter, boolean isReverseOrder) {
+            super(RocksDBPartition.this.metadata, RocksDBPartition.this.partitionKey, DeletionTime.LIVE,
+                    RocksDBPartition.this.metadata.partitionColumns(), null, isReverseOrder, EncodingStats.NO_STATS);
+            this.slices = slices.iterator();
+            this.iterOrder = isReverseOrder ? PartitionIterOrder.REVERSED : PartitionIterOrder.NORMAL;
+            this.columnFilter = columnFilter;
+        }
+
+        protected Unfiltered computeNext()
+        {
+            while (true)
+            {
+                if (currentSlice == null)
+                {
+                    if(slices.hasNext()) {
+                        currentSlice = sliceIterator(slices.next(), columnFilter, iterOrder);
+                    }
+                    else {
+                        return endOfData();
+                    }
+                }
+
+                if (currentSlice.hasNext())
+                    return currentSlice.next();
+
+                currentSlice = null;
+            }
+        }
     }
 
     private UnfilteredRowIterator sliceIterator(Slice slice, ColumnFilter columnFilter, PartitionIterOrder iterOrder)
